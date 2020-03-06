@@ -44,8 +44,8 @@ Algorithm process :
 
 push!(LOAD_PATH,"/nethome/bouillet/Julia/TVA.jl/src")
 using tva, PosDefManifold, PosDefManifoldML, GLMNet
-using MPTools, Processdb, EEGio
-using Diagonalizations
+using MPTools, Processdb, EEGio, LinearAlgebra
+using Diagonalizations, fitTVA
 
 base = 3;
 Dir, dbList, estimatorList = MPTools.init();
@@ -71,13 +71,15 @@ yj = IntVector(o2.y[1:180])
 
 U = mca(convert(Vector{Matrix{Float64}},Vi),convert(Vector{Matrix{Float64}},Vj))
 
-Di = Vector{Matrix{Float64}}(undef,length(Vi))
-Dj = Vector{Matrix{Float64}}(undef,length(Vj))
+#Di = Vector{Matrix{Float64}}(undef,length(Vi))
+#Dj = Vector{Matrix{Float64}}(undef,length(Vj))
+Di = copy(Vi)
+Dj = copy(Vj)
+
 for i = 1:length(Vi)
-    Di[i] = U.F'[1]*Vi[i]*U.F[1]
-    Dj[i] = U.F'[2]*Vj[i]*U.F[2]
+    Di[i] =Hermitian(U.F'[1]*Vi[i]*U.F[1])
+    Dj[i] =Hermitian(U.F'[2]*Vj[i]*U.F[2])
 end
 
-
 model = ENLR()
-𝑀 = fit(model,Di,yi)
+M = fit_TVA(model,Di,yi)

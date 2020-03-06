@@ -92,13 +92,32 @@ end
 #### 2-Set Alignement ####
 #Considering Ci and Cj two sets of realizations => Cross session or Cross subject in our case from files o1 and o2
 
-#=
+function twoSetAlignement(o1,o2)
+    Ci = genSet(o1)
+    Gi = genMassCenter(Ci; meantype = "mean", metric = Fisher)
+    Vi = logMap(Fisher,Ci,Gi)
 
-Ci = genSet(o1); Vi = genTangentVector(Ci)
-Cj = genSet(o2); Vj = genTangentVector(Cj)
 
-U = mca(Vi,Vj)
+    Cj = genSet(o2)
+    Gj = genMassCenter(Cj; meantype = "mean", metric = Fisher)
+    Vj = logMap(Fisher,Cj,Gj)
 
-=#
+    #Vic = convert(Vector{Matrix{Float64}},Vi)
+    #Vjc = convert(Vector{Matrix{Float64}},Vj)
+    Vj = Vj[1:180]
+
+    yi = IntVector(o1.y)
+    yj = IntVector(o2.y[1:180])
+
+    U = mca(convert(Vector{Matrix{Float64}},Vi),convert(Vector{Matrix{Float64}},Vj))
+
+    Di = copy(Vi)
+    Dj = copy(Vj)
+
+    for i = 1:length(Vi)
+        Di[i] =Hermitian(U.F'[1]*Vi[i]*U.F[1])
+        Dj[i] =Hermitian(U.F'[2]*Vj[i]*U.F[2])
+    end
+end
 
 end #Module
