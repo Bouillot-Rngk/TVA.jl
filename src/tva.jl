@@ -13,12 +13,12 @@ Cm the set m of covariances matrix
 Let be Gm, vmk and Vmk just as before
 
 =#
-
-push!(LOAD_PATH,"/nethome/bouillet/Julia/TVA.jl/tools")
-push!(LOAD_PATH,"/nethome/bouillet/Julia/TVA.jl/src")
+push!(LOAD_PATH, homedir()*"/src/julia/Modules")
+push!(LOAD_PATH,homedir()*"/Julia/TVA.jl/tools")
+push!(LOAD_PATH,homedir()*"/Julia/TVA.jl/src")
+push!(LOAD_PATH,homedir()*"/Julia/MultiProcessing.jl/src")
 
 using PosDefManifold, CovarianceEstimation, Diagonalizations,LinearAlgebra
-include("EEGio.jl")
 using EEGio
 
 

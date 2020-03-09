@@ -42,10 +42,13 @@ Algorithm process :
 
 =#
 
-push!(LOAD_PATH,"/nethome/bouillet/Julia/TVA.jl/src")
+push!(LOAD_PATH, homedir()*"/src/julia/Modules")
+push!(LOAD_PATH,homedir()*"/Julia/TVA.jl/tools")
+push!(LOAD_PATH,homedir()*"/Julia/TVA.jl/src")
+push!(LOAD_PATH,homedir()*"/Julia/MultiProcessing.jl/src")
 using tva, PosDefManifold, PosDefManifoldML, GLMNet
 using MPTools, Processdb, EEGio, LinearAlgebra
-using Diagonalizations, fitTVA
+using Diagonalizations
 
 base = 3;
 Dir, dbList, estimatorList = MPTools.init();
