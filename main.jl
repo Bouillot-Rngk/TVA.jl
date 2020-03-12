@@ -42,19 +42,67 @@ Algorithm process :
 
 =#
 
-push!(LOAD_PATH, homedir()*"/src/julia/Modules")
-push!(LOAD_PATH,homedir()*"/Julia/TVA.jl/tools")
+
 push!(LOAD_PATH,homedir()*"/Julia/TVA.jl/src")
 push!(LOAD_PATH,homedir()*"/Julia/MultiProcessing.jl/src")
-using tva, PosDefManifold, PosDefManifoldML, GLMNet
-using MPTools, Processdb, EEGio, LinearAlgebra
-using Diagonalizations
 
-base = 3;
-Dir, dbList, estimatorList = MPTools.init();
-files = Processdb.loadDBP300(base);
-o1=readNY(files[100]; bandpass=(1, 16))
-o2=readNY(files[95]; bandpass=(1, 16))
+
+using tva, tsa
+using MPTools, Processdb, EEGio, LinearAlgebra,PosDefManifold, PosDefManifoldML, Diagonalizations
+using GLMNet
+
+
+
+target_s = 3
+source_s = [1,2,4]
+db = 1
+Dir = homedir()*"/Documents/My Data/EEG data/npz/BI.EEG.2013-Sorted"
+dbSearch = Dir*"/Sujet$db/Base$db/"
+dbSearch = homedir()*"/Documents/My Data/EEG data/npz/P300/BI.EEG.2012-GIPSA"
+files = loadNYdb(dbSearch)
+
+odt = readNY(files[target_s]; bandpass = (1,16))
+ods = [readNY(files[s]; bandpass = (1,16)) for s ∈ source_s]
+vDT = eegTangentVector(odt, verbose=false, ncomp=4, estimator="Wolf")
+vDS = [eegTangentVector(s, verbose=false, ncomp=4, estimator="Wolf") for s ∈ ods]
+
+d = size(vDT, 1)
+TAlabel = findfirst(isequal("Target"), odt.clabels)
+NTlabel = findfirst(isequal("NonTarget"), odt.clabels)
+minNT = min(cat(length(odt.cstim[NTlabel]), [length(o.cstim[NTlabel]) for o ∈ ods], dims=1)...)
+minTA = min(cat(length(odt.cstim[TAlabel]), [length(o.cstim[TAlabel]) for o ∈ ods], dims=1)...)
+
+xDT=zeros(eltype(odt.X), d, minNT+minTA) # vDT
+xDS=[copy(xDT) for _ ∈ ods] # vDS
+xDT[:, 1:minNT] = vDT[:, 1:minNT]
+xDT[:, minNT:end] = vDT[:, size(vDT, 2)-minTA:end]
+for (x, v) ∈ zip(xDS, vDS)
+    x[:, 1:minNT] = v[:, 1:minNT]
+    x[:, minNT:end] = v[:, size(v, 2)-minTA:end]
+end
+𝕏 = [xDT, xDS...]
+𝕪 = [repeat([NTlabel], minNT); repeat([TAlabel], minTA)]
+
+
+gm = gmca(𝕏)
+
+𝕏aligned = [gm.F[i]'*𝕏[i] for i=1:length(𝕏)]
+𝕏Tr = vcat([Matrix(𝕏aligned[i]'') for i in range(2, stop=length(source_s)+1)]...)
+𝕪Tr = repeat(𝕪, 2)
+model = fit(ENLR(Fisher), 𝕏Tr, 𝕪)
+𝕏Te = Matrix(𝕏aligned[1]')
+
+𝕪Pr = PosDefManifoldML.predict(model, 𝕏Te)
+predErr = predictErr(𝕪, 𝕪Pr)
+acc = 100. - predErr
+
+o1=readNY(files[3]; bandpass=(1, 16))
+o2=readNY(files[4]; bandpass=(1, 16))
+
+vDT = genTangentVector(o1)
+Ci = genSet(o1)
+
+
 
 Ci = genSet(o1)
 Gi = genMassCenter(Ci; meantype = "mean", metric = Fisher)

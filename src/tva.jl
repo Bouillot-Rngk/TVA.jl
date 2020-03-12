@@ -13,12 +13,14 @@ Cm the set m of covariances matrix
 Let be Gm, vmk and Vmk just as before
 
 =#
-push!(LOAD_PATH, homedir()*"/src/julia/Modules")
+
 push!(LOAD_PATH,homedir()*"/Julia/TVA.jl/tools")
 push!(LOAD_PATH,homedir()*"/Julia/TVA.jl/src")
 push!(LOAD_PATH,homedir()*"/Julia/MultiProcessing.jl/src")
 
-using PosDefManifold, CovarianceEstimation, Diagonalizations,LinearAlgebra
+using PosDefManifold, CovarianceEstimation, Diagonalizations,LinearAlgebra, MPTools
+
+
 using EEGio
 
 
@@ -34,8 +36,8 @@ function genSet(o)
     Y=mean(o.X, o.wl, o.cstim; weights=w)[2]
     Y=Y*eigvecs(cov(SimpleCovariance(), Y))[:, o.ne-3:o.ne]
 
-    #Calcul de la matrice de covariance ponderee
-    Clw=ℍVector([ℍ(cov(SimpleCovariance(), [X Y])) for X ∈ o.trials])
+    #Calcul de la matrice de covariance ponderee Ledoit Wolf
+    Clw=ℍVector([ℍ(cov(LinearShrinkage(ConstantCorrelation()), [X Y])) for X ∈ o.trials])
     return Clw
 end
 
@@ -44,7 +46,7 @@ end
 #is it useful to implement other means ?
 
 function genMassCenter( o::EEG;
-                        meantype::String = "mean",
+                        meantype::String = "gmean",
                         metric::Metric = "Fisher"
                         )
 
@@ -78,46 +80,28 @@ end
 
 
 #### Computation of Vmk ####
-function genTangentVector(  Cm::HermitianVector;
-                            meantype::String = "mean"
+#=function genTangentVector(  Cm::HermitianVector;
+                            meantype::String = "gmean"
                             )
 
-    Gm = genMassCenter(Cm; meantype = mean, metric = Fisher)
+    Gm = genMassCenter(Cm; meantype = meantype, metric = Fisher)
     Vmk = logMap(Fisher,Cm,Gm)
-    return Vmk
+    return Gm, Vmk
 
+end=#
+
+function genTangentVector( o::EEG;
+                            meantype::String = "gmean"
+                            )
+    Cm = genSet(o)
+    Gm = genMassCenter(Cm; meantype = "gmean", metric = Fisher)
+    Vmk = logMap(Fisher, Cm, Gm)
+    V = hcat([vecP(log(G), range=1:o.ne) for G ∈ Vmk]...)
+    return V
 end
 
 
 #### 2-Set Alignement ####
 #Considering Ci and Cj two sets of realizations => Cross session or Cross subject in our case from files o1 and o2
-
-function twoSetAlignement(o1,o2)
-    Ci = genSet(o1)
-    Gi = genMassCenter(Ci; meantype = "mean", metric = Fisher)
-    Vi = logMap(Fisher,Ci,Gi)
-
-
-    Cj = genSet(o2)
-    Gj = genMassCenter(Cj; meantype = "mean", metric = Fisher)
-    Vj = logMap(Fisher,Cj,Gj)
-
-    #Vic = convert(Vector{Matrix{Float64}},Vi)
-    #Vjc = convert(Vector{Matrix{Float64}},Vj)
-    Vj = Vj[1:180]
-
-    yi = IntVector(o1.y)
-    yj = IntVector(o2.y[1:180])
-
-    U = mca(convert(Vector{Matrix{Float64}},Vi),convert(Vector{Matrix{Float64}},Vj))
-
-    Di = copy(Vi)
-    Dj = copy(Vj)
-
-    for i = 1:length(Vi)
-        Di[i] =Hermitian(U.F'[1]*Vi[i]*U.F[1])
-        Dj[i] =Hermitian(U.F'[2]*Vj[i]*U.F[2])
-    end
-end
 
 end #Module
