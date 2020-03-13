@@ -1,13 +1,11 @@
-push!(LOAD_PATH, homedir()*"/src/julia/Modules")
-push!(LOAD_PATH,homedir()*"/Julia/TVA.jl/src")
-push!(LOAD_PATH,homedir()*"/Julia/MultiProcessing.jl/src")
+Dir = homedir()*"\\Documents\\ENSE3\\Thesis"
+push!(LOAD_PATH,Dir*"\\Julia\\TVA.jl\\src")
+push!(LOAD_PATH,Dir*"/Julia/MultiProcessing.jl/src")
 
 
 using LinearAlgebra, PosDefManifold, PosDefManifoldML, CovarianceEstimation,
       Dates, Distributions, PDMats, Revise, BenchmarkTools, Diagonalizations,
       Random, DataFrames, CSV, Plots, JLD
-
-
 
 
 using EEGio, FileSystem, EEGpreprocessing, System, ERPs,
